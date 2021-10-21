@@ -13,8 +13,28 @@ from django.urls import reverse
 from rest_framework import status
 
 
-class CreateListStudent(APIView):
+
+
+
+
+
+class HomeView(View):
+    """
+    View for download button page
+    """
+    template = 'api/index.html'
     
+    def get(self, request, lot=None):
+        return render(request, self.template, locals())
+    
+
+
+
+
+class CreateListStudent(APIView):
+    """
+    APi view for create and list student 
+    """
     def get(self, request):
         student = Student.objects.all()
         serializer = StudentSerializer(student, many=True)
@@ -39,7 +59,9 @@ class CreateListStudent(APIView):
     
         
 class UpdateDeleteStudent(APIView):
-    
+    """
+    Api view for update and delete student
+    """
     def get_object(self, pk):
         try:
             student = Student.objects.get(id=pk)
@@ -93,17 +115,11 @@ class UpdateDeleteStudent(APIView):
             context['message'] = str(e)
             return Response(context, status=status_code)
             
-            
-            
-class HomeView(View):
-    template = 'api/index.html'
-    
-    def get(self, request, lot=None):
-        return render(request, self.template, locals())
 
-        
 class Download(APIView):
-    
+    """
+    View for download student details as a streaming 
+    """
     def get(self, request):
         rows =  Student.objects.all()
         header = ['id','first name', 'last name']
