@@ -8,6 +8,10 @@ from django.views import View
 from django.http import StreamingHttpResponse
 import csv
 import io
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from rest_framework import status
+
 
 class CreateListStudent(APIView):
     
@@ -18,15 +22,20 @@ class CreateListStudent(APIView):
     
     def post(self, request):
         data = []
-        for i in range(100):
-            first_name = randoem_name()
-            last_name = randoem_name()
-            request.data.update({"first_name": first_name, "last_name":last_name})
-            serializer = StudentSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                data.append(serializer.data)
-        return Response(data)
+        context = {}
+        for i in range(1000):
+            student_dtls = {}
+            student_dtls['first_name'] = randoem_name()
+            student_dtls['last_name'] = randoem_name()
+            data.append(student_dtls)
+        serializer = StudentSerializer(data=data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            context['data'] = serializer.data
+            context['status'] = True
+            status_code = status.HTTP_201_CREATED
+            context['message'] = "All Student data created"
+            return Response(context, status=status_code)
     
         
 class UpdateDeleteStudent(APIView):
@@ -39,34 +48,50 @@ class UpdateDeleteStudent(APIView):
             return False
         
     def put(self, request, pk=None):
+        context = {}
         try:
             student = self.get_object(pk)
             if student:
                 serializer = StudentSerializer(student ,data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
-                    return Response(serializer.data, status=200)
+                    context['data'] = serializer.data
+                    context['status'] = True
+                    status_code = 200
+                    context['message'] = "Student data Updated"
+                    return Response(context, status=status_code)
                 return Response(serializer.errors, status=400)
             else:
                 return Response({'mesg': "NO student found"},
                     status=404)
         except Exception as e:
-            return Response({'mesg': str(e)},
-                            status=404)
+            context['data'] = []
+            context['status'] = False
+            status_code = status.HTTP_400_BAD_REQUEST
+            context['message'] = str(e)
+            return Response(context, status=status_code)
 
     def delete(self, request, pk=None):
+        context = {}
         try:
             student = self.get_object(pk)
             if student:
                 student.delete()
-                return Response({'mesg':"student data Deleted"},
-                            status=200)
+                context['data'] = []
+                context['status'] = True
+                status_code = 200
+                context['message'] = "Student data delete"
+                return Response(context, status=status_code)
+                
             else:
                 return Response({'mesg': "NO student found"},
                     status=404)
         except Exception as e:
-            return Response({'mesg': str(e)},
-                    status=404)
+            context['data'] = []
+            context['status'] = False
+            status_code = status.HTTP_400_BAD_REQUEST
+            context['message'] = str(e)
+            return Response(context, status=status_code)
             
             
             
@@ -75,18 +100,20 @@ class HomeView(View):
     
     def get(self, request, lot=None):
         return render(request, self.template, locals())
-    
-    
+
+        
 class Download(APIView):
     
     def get(self, request):
         rows =  Student.objects.all()
+        header = ['id','first name', 'last name']
         def stream():
             buffer_ = io.StringIO()
             writer = csv.writer(buffer_)
+            writer.writerow(header)
             for row in rows:
-                print(row,'+++++++++++++++++++++++++')
-                writer.writerow({"first_name": row.first_name})
+                data_list = [row.id, row.first_name, row.last_name]
+                writer.writerow(data_list)
                 buffer_.seek(0)
                 data = buffer_.read()
                 buffer_.seek(0)
@@ -98,8 +125,5 @@ class Download(APIView):
         )
         disposition = "attachment; filename=file.csv"
         response['Content-Disposition'] = disposition
-        # writer = csv.DictWriter(response, fieldnames=["email"])
-        # writer.writeheader()
-        # writer.writerow({"first_name": email.email})
         return response
         
