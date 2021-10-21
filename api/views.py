@@ -28,6 +28,14 @@ class HomeView(View):
         return render(request, self.template, locals())
     
 
+class DummyPage(View):
+    """
+    View for dummy page
+    """
+    template = 'api/dummy.html'
+    def get(self, request, lot=None):
+        return HttpResponseRedirect(reverse("api:home"))
+
 
 
 
